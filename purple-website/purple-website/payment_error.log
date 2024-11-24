@@ -1,0 +1,31 @@
+[24-Nov-2024 18:24:01 Europe/Berlin] 
+
+=== New Payment Request ===
+[24-Nov-2024 18:24:01 Europe/Berlin] POST data: Array
+(
+    [razorpay_payment_id] => pay_PPDtyKYur23tin
+    [razorpay_order_id] => order_1732469018884
+    [razorpay_signature] => undefined
+    [amount] => 1800
+    [email] => jo@gmail.com
+    [name] => Jo
+    [phone] => 7741258963
+)
+
+[24-Nov-2024 18:24:01 Europe/Berlin] Processing payment:
+[24-Nov-2024 18:24:01 Europe/Berlin] Payment ID: pay_PPDtyKYur23tin
+[24-Nov-2024 18:24:01 Europe/Berlin] Order ID: order_1732469018884
+[24-Nov-2024 18:24:01 Europe/Berlin] Amount: 18
+[24-Nov-2024 18:24:01 Europe/Berlin] Email: jo@gmail.com
+[24-Nov-2024 18:24:01 Europe/Berlin] Name: Jo
+[24-Nov-2024 18:24:01 Europe/Berlin] Phone: 7741258963
+[24-Nov-2024 18:24:01 Europe/Berlin] Verifying Payment:
+[24-Nov-2024 18:24:01 Europe/Berlin] Payment ID: pay_PPDtyKYur23tin
+[24-Nov-2024 18:24:01 Europe/Berlin] Order ID: order_1732469018884
+[24-Nov-2024 18:24:01 Europe/Berlin] Signature: undefined
+[24-Nov-2024 18:24:01 Europe/Berlin] Text to hash: pay_PPDtyKYur23tin|order_1732469018884
+[24-Nov-2024 18:24:01 Europe/Berlin] Generated Signature: 880e4e09215dcb153cee5fe8b8340215fff4078a594289f018accda654e43ae3
+[24-Nov-2024 18:24:01 Europe/Berlin] Received Signature: undefined
+[24-Nov-2024 18:24:01 Europe/Berlin] Signature valid? No
+[24-Nov-2024 18:24:01 Europe/Berlin] Payment signature verification failed
+[24-Nov-2024 18:24:01 Europe/Berlin] Error: Payment signature verification failed

@@ -1,0 +1,59 @@
+# Environment Files
+.env
+.env.*
+!.env.example
+
+# Dependencies
+/vendor/
+/node_modules/
+package-lock.json
+composer.lock
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+.DS_Store
+
+# Logs and Databases
+*.log
+*.sql
+*.sqlite
+/logs/
+
+# Cache and Temporary Files
+/cache/
+/temp/
+*.cache
+*.tmp
+
+# Build and Compiled Files
+/dist/
+/build/
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Uploads and User Content
+/uploads/
+/public/uploads/
+/storage/*.key
+
+# Test Coverage
+/coverage/
+/phpunit.xml
+.phpunit.result.cache
+
+# Other
+Thumbs.db
+.htaccess
+*.bak
+*.zip
+*.tar
+*.gz

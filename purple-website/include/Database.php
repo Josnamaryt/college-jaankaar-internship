@@ -1,7 +1,7 @@
 <?php
 class Database {
     private $host = "localhost";
-    private $db_name = "purple_website";
+    private $db_name = "login_register";
     private $username = "root";
     private $password = "";
     private $conn;
@@ -10,17 +10,17 @@ class Database {
         $this->conn = null;
 
         try {
-            $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name;
-            error_log("Attempting to connect to database with DSN: " . $dsn);
-            
-            $this->conn = new PDO($dsn, $this->username, $this->password);
+            $this->conn = new PDO(
+                "mysql:host=" . $this->host . ";dbname=" . $this->db_name,
+                $this->username,
+                $this->password
+            );
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             $this->conn->exec("set names utf8mb4");
-            error_log("Database connection successful");
         } catch(PDOException $e) {
-            error_log("Detailed Connection Error: " . $e->getMessage());
-            throw new Exception("Database connection failed: " . $e->getMessage());
+            error_log("Connection Error: " . $e->getMessage());
+            throw new Exception("Database connection failed. Please try again later.");
         }
 
         return $this->conn;

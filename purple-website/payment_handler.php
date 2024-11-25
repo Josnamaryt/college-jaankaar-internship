@@ -1,108 +1,91 @@
 <?php
-require('config.php');
-require('vendor/autoload.php');
+require('dbconnection.php');
 
-use Razorpay\Api\Api;
-use Razorpay\Api\Errors\SignatureVerificationError;
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-header('Content-Type: application/json');
+// Razorpay credentials
+$keyId = 'rzp_test_p9ccnzVHbdWZkL';
+$keySecret = 'F7DG9MYbPufdAjo6sGo8hltX';
 
-// Set up error logging
-ini_set('log_errors', 1);
-ini_set('error_log', 'payment_error.log');
-
-function logPayment($message, $data = null) {
-    $timestamp = date('[d-M-Y H:i:s e] ');
-    error_log($timestamp . $message);
-    if ($data) {
-        error_log($timestamp . print_r($data, true));
+// Verify payment signature
+function verifyPaymentSignature($razorpay_payment_id, $razorpay_order_id, $razorpay_signature) {
+    global $keySecret;
+    
+    error_log("Verifying Payment - Payment ID: " . $razorpay_payment_id);
+    error_log("Order ID: " . $razorpay_order_id);
+    error_log("Signature: " . $razorpay_signature);
+    
+    $generated_signature = hash_hmac('sha256', $razorpay_payment_id . '|' . $razorpay_order_id, $keySecret);
+    error_log("Generated Signature: " . $generated_signature);
+    error_log("Received Signature: " . $razorpay_signature);
+    
+    if ($generated_signature == $razorpay_signature) {
+        error_log("Signature verification successful");
+        return true;
     }
+    error_log("Signature verification failed");
+    return false;
 }
 
-logPayment("\n=== New Payment Request ===");
-logPayment("POST data:", $_POST);
-
-try {
-    // Initialize Razorpay API
-    $api = new Api('rzp_test_p9ccnzVHbdWZkL', 'F7DG9MYbPufdAjo6sGo8hltX');
+// Handle payment verification
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $response = array();
+    error_log("Received POST request for payment verification");
+    error_log("POST data: " . print_r($_POST, true));
     
-    // Get payment data
-    $payment_id = $_POST['razorpay_payment_id'];
-    $order_id = $_POST['razorpay_order_id'];
-    $signature = $_POST['razorpay_signature'];
-    $amount = isset($_POST['amount']) ? (int)$_POST['amount'] / 100 : 0; // Convert from paise to rupees
-    $email = $_POST['email'];
-    $name = $_POST['name'];
-    $phone = $_POST['phone'];
-
-    logPayment("Processing payment:");
-    logPayment("Payment ID: " . $payment_id);
-    logPayment("Order ID: " . $order_id);
-    logPayment("Amount: " . $amount);
-    logPayment("Email: " . $email);
-    logPayment("Name: " . $name);
-    logPayment("Phone: " . $phone);
-
-    // Verify the payment signature
-    logPayment("Verifying Payment:");
-    logPayment("Payment ID: " . $payment_id);
-    logPayment("Order ID: " . $order_id);
-    logPayment("Signature: " . $signature);
-
-    // Verify signature
-    $attributes = array(
-        'razorpay_order_id' => $order_id,
-        'razorpay_payment_id' => $payment_id,
-        'razorpay_signature' => $signature
-    );
-
-    $api->utility->verifyPaymentSignature($attributes);
-
-    // Connect to database
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    if ($conn->connect_error) {
-        throw new Exception("Connection failed: " . $conn->connect_error);
+    try {
+        if (!isset($_POST['razorpay_payment_id']) || !isset($_POST['razorpay_order_id']) || !isset($_POST['razorpay_signature'])) {
+            throw new Exception("Missing required payment parameters");
+        }
+        
+        $razorpay_payment_id = $_POST['razorpay_payment_id'];
+        $razorpay_order_id = $_POST['razorpay_order_id'];
+        $razorpay_signature = $_POST['razorpay_signature'];
+        
+        if (verifyPaymentSignature($razorpay_payment_id, $razorpay_order_id, $razorpay_signature)) {
+            // Get database connection
+            $conn = getConnection();
+            
+            try {
+                // Start transaction
+                $conn->beginTransaction();
+                
+                // Insert payment record
+                $stmt = $conn->prepare("INSERT INTO payments (razorpay_payment_id, razorpay_order_id, razorpay_signature, status) VALUES (?, ?, ?, 'success')");
+                $stmt->execute([$razorpay_payment_id, $razorpay_order_id, $razorpay_signature]);
+                
+                // Commit transaction
+                $conn->commit();
+                error_log("Payment record saved successfully");
+                
+                $response = array(
+                    'status' => 'success',
+                    'message' => 'Payment verified successfully'
+                );
+            } catch (Exception $e) {
+                // Rollback transaction on error
+                $conn->rollBack();
+                error_log("Database error: " . $e->getMessage());
+                throw $e;
+            }
+        } else {
+            $response = array(
+                'status' => 'error',
+                'message' => 'Payment verification failed'
+            );
+        }
+    } catch (Exception $e) {
+        error_log("Error in payment processing: " . $e->getMessage());
+        $response = array(
+            'status' => 'error',
+            'message' => $e->getMessage()
+        );
     }
-
-    // Check if payment already exists
-    $stmt = $conn->prepare("SELECT id FROM payments WHERE payment_id = ?");
-    $stmt->bind_param("s", $payment_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
     
-    if ($result->num_rows > 0) {
-        throw new Exception("Payment already processed");
-    }
-
-    // Insert payment details
-    $stmt = $conn->prepare("INSERT INTO payments (payment_id, order_id, amount, email, name, phone, status) VALUES (?, ?, ?, ?, ?, ?, 'success')");
-    $stmt->bind_param("ssdsss", $payment_id, $order_id, $amount, $email, $name, $phone);
-    
-    if (!$stmt->execute()) {
-        throw new Exception("Failed to save payment details: " . $stmt->error);
-    }
-
-    $conn->close();
-
-    logPayment("Payment processed successfully");
-    
-    echo json_encode([
-        'status' => 'success',
-        'message' => 'Payment verified successfully'
-    ]);
-
-} catch (SignatureVerificationError $e) {
-    logPayment("Signature verification failed");
-    http_response_code(400);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Payment signature verification failed'
-    ]);
-} catch (Exception $e) {
-    logPayment("Error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ]);
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit;
 }
+?>

@@ -1,6 +1,6 @@
 <?php
 // Database connection
-$conn = new mysqli('localhost', 'root', '', 'purple_website');
+$conn = new mysqli('localhost', 'root', '', 'login_register');
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
@@ -14,7 +14,7 @@ $result = $conn->query($sql);
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['product_image'])) {
     $productName = $_POST['product_name'];
     $productPrice = $_POST['product_price'];
-    $productImage = $_FILES['product_image']
+    $productImage = $_FILES['product_image'];
 
     // Handle image upload
     $imageName = time() . '_' . basename($productImage['name']);
@@ -39,6 +39,7 @@ if (isset($_POST['delete_product'])) {
     $stmt->close();
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

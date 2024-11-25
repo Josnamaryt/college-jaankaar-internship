@@ -28,9 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = $_POST["password"];
     
     try {
-        error_log("Attempting to get database connection");
         $db = getConnection();
-        error_log("Database connection successful");
 
         // User login
         if (isset($_POST["login"])) {
@@ -69,52 +67,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // User Registration
         elseif (isset($_POST["register"])) {
-            error_log("Processing registration for email: " . $email);
             $fullname = $_POST["fullname"];
             $password_repeat = $_POST["repeat_password"];
 
             if ($password !== $password_repeat) {
                 echo "<div class='alert alert-danger'>Passwords do not match.</div>";
             } else {
-                try {
-                    // Check if email already exists
-                    $sql = "SELECT id FROM users WHERE email = :email";
-                    error_log("Checking for existing email with query: " . $sql);
+                // Check if email already exists
+                $sql = "SELECT id FROM users WHERE email = :email";
+                $stmt = $db->prepare($sql);
+                $stmt->execute(['email' => $email]);
+                if ($stmt->fetch()) {
+                    echo "<div class='alert alert-danger'>Email already exists. Please use a different email.</div>";
+                } else {
+                    $password_hashed = password_hash($password, PASSWORD_DEFAULT);
+
+                    $sql = "INSERT INTO users (full_name, email, password, status) VALUES (:fullname, :email, :password, 'active')";
                     $stmt = $db->prepare($sql);
-                    $stmt->execute(['email' => $email]);
-                    
-                    if ($stmt->fetch()) {
-                        echo "<div class='alert alert-danger'>Email already exists. Please use a different email.</div>";
+                    if ($stmt->execute([
+                        'fullname' => $fullname,
+                        'email' => $email,
+                        'password' => $password_hashed
+                    ])) {
+                        echo "<div class='alert alert-success'>Registration successful! You can now log in.</div>";
                     } else {
-                        $password_hashed = password_hash($password, PASSWORD_DEFAULT);
-                        
-                        $sql = "INSERT INTO users (full_name, email, password, status) VALUES (:fullname, :email, :password, 'active')";
-                        error_log("Attempting to insert new user with query: " . $sql);
-                        $stmt = $db->prepare($sql);
-                        $params = [
-                            'fullname' => $fullname,
-                            'email' => $email,
-                            'password' => $password_hashed
-                        ];
-                        
-                        if ($stmt->execute($params)) {
-                            error_log("User registration successful for email: " . $email);
-                            echo "<div class='alert alert-success'>Registration successful! You can now log in.</div>";
-                        } else {
-                            $error = $stmt->errorInfo();
-                            error_log("Registration failed. Error info: " . print_r($error, true));
-                            echo "<div class='alert alert-danger'>Registration failed. Database error: " . $error[2] . "</div>";
-                        }
+                        echo "<div class='alert alert-danger'>Error during registration. Please try again.</div>";
                     }
-                } catch (PDOException $e) {
-                    error_log("PDO Exception during registration: " . $e->getMessage());
-                    echo "<div class='alert alert-danger'>Database error during registration: " . $e->getMessage() . "</div>";
                 }
             }
         }
     } catch (Exception $e) {
-        error_log("Critical error during registration: " . $e->getMessage());
-        echo "<div class='alert alert-danger'>Critical error: " . $e->getMessage() . "</div>";
+        error_log("Login error: " . $e->getMessage());
+        echo "<div class='alert alert-danger'>An error occurred. Please try again later.</div>";
     }
 }
 ?>

@@ -353,7 +353,7 @@
         document.getElementById('booking1').style.display = 'block';
     });
 
-    document.getElementById('proceedToPayButton').addEventListener('click', async function(e) {
+    document.getElementById('proceedToPayButton').addEventListener('click', function(e) {
         e.preventDefault();
         
         const name = document.getElementById('name').value;
@@ -367,89 +367,66 @@
         
         const amount = loadCartItems() * 100; // Convert to smallest currency unit (paise)
 
-        try {
-            // First create an order
-            const orderResponse = await fetch('create_order.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    amount: amount,
-                    currency: 'INR'
-                })
-            });
-
-            const orderData = await orderResponse.json();
-            
-            if (!orderData.order_id) {
-                throw new Error('Failed to create order');
-            }
-
-            const options = {
-                key: 'rzp_test_p9ccnzVHbdWZkL',
-                amount: amount,
-                currency: 'INR',
-                name: 'Purple Website',
-                description: 'Purchase Payment',
-                order_id: orderData.order_id,
-                handler: function(response) {
-                    console.log('Payment Response:', response);
-                    
-                    // Prepare the data to send
-                    const data = new URLSearchParams({
+        const options = {
+            key: 'rzp_test_p9ccnzVHbdWZkL',
+            amount: amount,
+            currency: 'INR',
+            name: 'Purple Website',
+            description: 'Purchase Payment',
+            handler: function(response) {
+                console.log('Payment response:', response);  // Debug log
+                
+                // Check if all required parameters are present
+                if (!response.razorpay_payment_id || !response.razorpay_order_id || !response.razorpay_signature) {
+                    console.error('Missing payment parameters:', response);
+                    alert('Payment verification failed: Missing parameters');
+                    return;
+                }
+                
+                fetch('payment_handler.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
                         razorpay_payment_id: response.razorpay_payment_id,
                         razorpay_order_id: response.razorpay_order_id,
-                        razorpay_signature: response.razorpay_signature,
-                        amount: amount,
-                        email: email,
-                        name: name,
-                        phone: phone
-                    });
-                    
-                    // Send to backend
-                    fetch('payment_handler.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: data
+                        razorpay_signature: response.razorpay_signature
                     })
-                    .then(response => {
-                        console.log('Server Response:', response);
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Verification Result:', data);
-                        if (data.status === 'success') {
-                            alert('Payment successful! Thank you for your purchase.');
-                            localStorage.removeItem('cartItems');
-                            window.location.href = 'index.php';
-                        } else {
-                            alert('Payment verification failed: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('An error occurred. Please try again.');
-                    });
-                },
-                prefill: {
-                    name: name,
-                    email: email,
-                    contact: phone
-                },
-                theme: {
-                    color: '#fe4c50'
-                }
-            };
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Server response:', data);  // Debug log
+                    if (data.status === 'success') {
+                        alert('Payment successful! Thank you for your purchase.');
+                        localStorage.removeItem('cartItems');
+                        window.location.href = 'index.php';
+                    } else {
+                        alert('Payment verification failed: ' + (data.message || 'Please contact support.'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred during payment verification. Please try again.');
+                });
+            },
+            prefill: {
+                name: name,
+                email: email,
+                contact: phone
+            },
+            theme: {
+                color: '#fe4c50'
+            }
+        };
 
-            const rzp = new Razorpay(options);
-            rzp.open();
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to initialize payment. Please try again.');
-        }
+        const rzp = new Razorpay(options);
+        rzp.open();
     });
 
     // Load cart items when page loads

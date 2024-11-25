@@ -1,6 +1,6 @@
 <?php
 // Database connection
-$conn = new mysqli('localhost', 'root', '', 'purple_website');
+$conn = new mysqli('localhost', 'username', 'password', 'your_database_name');
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
